@@ -29,7 +29,7 @@ format:
 # Introduction {visibility="hidden"}
 
 ```{r}
-#| eval: false
+#| eval: true
 library(quartomonothemer)
 library(showtext)
 
@@ -61,7 +61,81 @@ style_mono_quarto(
 
 ## Difference-in-Differences (DID) とは
 
+$$
+\tau = \left(\mathbb{E}[Y_{1, 1}] - \mathbb{E}[Y_{1, 0}]\right)
+- \left(\mathbb{E}[Y_{0, 1}] - \mathbb{E}[Y_{0, 1}]\right)
+$$
+
+![](static/img/did_design.svg){fig-align="center"}
+
+よくある Specification として Two-way Fixed Effect (TWFE) がある
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
+$$
+
+## Event Study Plot
+
+```{r}
+#| fig-align: center
+library(tidyverse)
+tibble(
+  t = -5:10,
+  y = c(rep(0, 5), rep(0.2, 11)) + c(rnorm(4, 0, 0.03), 0, rnorm(11, 0, 0.03))
+) |>
+ggplot(aes(x = t, y = y)) +
+  geom_line(color = color_base) +
+  geom_vline(xintercept = -1, linetype = "dashed") +
+  geom_hline(yintercept = 0) +
+  labs(x = "Time to Treatment", y = "Coeffiecient") +
+  theme_quarto() +
+  theme(
+    panel.grid.major.x = element_blank(),
+  )
+
+```
+
+
+
+- あるEvent/Treatment ($t = e$) の前後 の効果を時間に沿ってプロットすることも多い
+- 通常, Treatmentの一期前を基準として, その前後 $k$ 期の効果を $\tau_k$　とする
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne e-1} \tau_{k} D_{i, e + k} + \epsilon_{it}
+$$
+
+
 ## Staggered DID とは
+
+```{r}
+#| fig-align: center
+
+tibble(
+  t = rep(1985:2000, 3),
+  g = rep(1:3, each = 16),
+  lbl = case_when(
+    g == 1 & t >= 1990 ~ "Treated",
+    g == 2 & t >= 1995 ~ "Treated",
+    TRUE ~ "Control",
+  )
+) |>
+  mutate(lbl = factor(lbl, levels = c("Treated", "Control"))) |>
+ggplot(aes(x = t, y = factor(g), color = lbl)) +
+  geom_point(shape = "square", size = 10) +
+  scale_color_manual(values = c(color_base, color_accent)) +
+  labs(x = NULL, y = "Group") +
+  theme_quarto() +
+  theme(
+    panel.grid.major = element_blank())
+```
+
+- Treatmentのタイミングがグループごとに異なるケースがある
+- Event Studyの場合, $i \in g$ に対する処置タイミング $e_{g(i)}$ に対して
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne -1} \tau_{k} D_{e_{g(i)} + k} + \epsilon_{it}
+$$
+
 
 ## この論文の目的
 
@@ -132,6 +206,10 @@ where
 $$
 \tilde{D}_{it} = D_{it} - \bar{D}_t - \bar{D}_i + \bar{D}_{all}
 $$
+
+---
+
+![](static/img/jakiela_decomp.svg){fig-align="center"}
 
 ---
 

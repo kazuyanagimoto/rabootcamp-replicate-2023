@@ -368,9 +368,37 @@
 
 <section id="difference-in-differences-did-とは" class="slide level2">
 <h2>Difference-in-Differences (DID) とは</h2>
+<p><span class="math display">\[
+\tau = \left(\mathbb{E}[Y_{1, 1}] - \mathbb{E}[Y_{1, 0}]\right)
+- \left(\mathbb{E}[Y_{0, 1}] - \mathbb{E}[Y_{0, 1}]\right)
+\]</span></p>
+
+<img data-src="static/img/did_design.svg" class="r-stretch quarto-figure-center"><p>よくある Specification として Two-way Fixed Effect (TWFE) がある</p>
+<p><span class="math display">\[
+Y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
+\]</span></p>
+</section>
+<section id="event-study-plot" class="slide level2">
+<h2>Event Study Plot</h2>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-2-1.svg" class="r-stretch quarto-figure-center"><ul>
+<li>あるEvent/Treatment (<span class="math inline">\(t = e\)</span>) の前後 の効果を時間に沿ってプロットすることも多い</li>
+<li>通常, Treatmentの一期前を基準として, その前後 <span class="math inline">\(k\)</span> 期の効果を <span class="math inline">\(\tau_k\)</span>　とする</li>
+</ul>
+<p><span class="math display">\[
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne e-1} \tau_{k} D_{i, e + k} + \epsilon_{it}
+\]</span></p>
 </section>
 <section id="staggered-did-とは" class="slide level2">
 <h2>Staggered DID とは</h2>
+
+<img data-src="index_files/figure-revealjs/unnamed-chunk-3-1.svg" class="r-stretch quarto-figure-center"><ul>
+<li>Treatmentのタイミングがグループごとに異なるケースがある</li>
+<li>Event Studyの場合, <span class="math inline">\(i \in g\)</span> に対する処置タイミング <span class="math inline">\(e_{g(i)}\)</span> に対して</li>
+</ul>
+<p><span class="math display">\[
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne -1} \tau_{k} D_{e_{g(i)} + k} + \epsilon_{it}
+\]</span></p>
 </section>
 <section id="この論文の目的" class="slide level2">
 <h2>この論文の目的</h2>
@@ -441,6 +469,10 @@ Y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
 \tilde{D}_{it} = D_{it} - \bar{D}_t - \bar{D}_i + \bar{D}_{all}
 \]</span></p>
 </section>
+<section class="slide level2">
+
+
+<img data-src="static/img/jakiela_decomp.svg" class="r-stretch quarto-figure-center"></section>
 <section class="slide level2">
 
 <p><span class="math display">\[
