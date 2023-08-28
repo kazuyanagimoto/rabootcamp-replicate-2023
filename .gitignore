@@ -70,3 +70,4 @@ Manifest.toml
 settings.json
 *.Identifier
 /data
+.env

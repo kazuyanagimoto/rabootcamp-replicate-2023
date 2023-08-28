@@ -13,6 +13,6 @@
         "GitHub.copilot"
 	],
 	"forwardPorts": [8080, 8787],
-    "workspaceFolder": "/home/rstudio/work",
+    "workspaceFolder": "/home/rstudio/rabootcamp-replicate-2023",
     "shutdownAction": "stopCompose",
 }

@@ -1,0 +1,254 @@
+---
+title: "How much should we trust staggered difference-in-differences estimates?"
+subtitle: "@baker2022"
+author:
+  - name: 柳本和春
+    email: kazuharu.yanagimoto@cemfi.edu.es
+    orcid: 0009-0007-1967-8304
+    affiliations:
+    - name: CEMFI
+date: 2023-08-31
+date-format: long
+image: img/thumbnail.svg
+execute:
+    echo: false
+    warning: false
+    message: false
+    cache: false
+format:
+  revealjs:
+    width: 1600
+    height: 900
+    theme: [default, static/css/quartomonothemer.scss, static/css/custom.scss]
+    slide-number: true
+    fig-cap-location: top
+    fig-format: svg
+    pdf-separate-fragments: false
+---
+
+# Introduction {visibility="hidden"}
+
+```{r}
+#| eval: true
+library(quartomonothemer)
+library(showtext)
+
+font_title <- "Zen Maru Gothic"
+font_text <- "Noto Sans JP"
+color_base <- "#009F8C"
+color_base_light <- "#95DFD6"
+color_accent <- "#B75C9D"
+color_accent_light <- "#DBA6CC"
+gray <- "#bebebe"
+darkgray <- "#6d6d6d"
+
+font_add_google(font_title)
+font_add_google(font_text)
+showtext_auto()
+
+style_mono_quarto(
+  font_title = font_title,
+  font_text = font_text,
+  google_fonts = c(font_title, font_text),
+  color_base = color_base,
+  color_accent = color_accent,
+  color_link = color_accent,
+  color_code = color_base,
+  size_base = 30,
+  path_scss = here::here("static/css/quartomonothemer.scss")
+)
+```
+
+## Difference-in-Differences (DID) とは
+
+$$
+\tau = \left(\mathbb{E}[Y_{1, 1}] - \mathbb{E}[Y_{1, 0}]\right)
+- \left(\mathbb{E}[Y_{0, 1}] - \mathbb{E}[Y_{0, 1}]\right)
+$$
+
+![](static/img/did_design.svg){fig-align="center"}
+
+よくある Specification として Two-way Fixed Effect (TWFE) がある
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
+$$
+
+## Event Study Plot
+
+```{r}
+#| fig-align: center
+library(tidyverse)
+tibble(
+  t = -5:10,
+  y = c(rep(0, 5), rep(0.2, 11)) + c(rnorm(4, 0, 0.03), 0, rnorm(11, 0, 0.03))
+) |>
+ggplot(aes(x = t, y = y)) +
+  geom_line(color = color_base) +
+  geom_vline(xintercept = -1, linetype = "dashed") +
+  geom_hline(yintercept = 0) +
+  labs(x = "Time to Treatment", y = "Coeffiecient") +
+  theme_quarto() +
+  theme(
+    panel.grid.major.x = element_blank(),
+  )
+
+```
+
+
+
+- あるEvent/Treatment ($t = e$) の前後 の効果を時間に沿ってプロットすることも多い
+- 通常, Treatmentの一期前を基準として, その前後 $k$ 期の効果を $\tau_k$　とする
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne e-1} \tau_{k} D_{i, e + k} + \epsilon_{it}
+$$
+
+
+## Staggered DID とは
+
+```{r}
+#| fig-align: center
+
+tibble(
+  t = rep(1985:2000, 3),
+  g = rep(1:3, each = 16),
+  lbl = case_when(
+    g == 1 & t >= 1990 ~ "Treated",
+    g == 2 & t >= 1995 ~ "Treated",
+    TRUE ~ "Control",
+  )
+) |>
+  mutate(lbl = factor(lbl, levels = c("Treated", "Control"))) |>
+ggplot(aes(x = t, y = factor(g), color = lbl)) +
+  geom_point(shape = "square", size = 10) +
+  scale_color_manual(values = c(color_base, color_accent)) +
+  labs(x = NULL, y = "Group") +
+  theme_quarto() +
+  theme(
+    panel.grid.major = element_blank())
+```
+
+- Treatmentのタイミングがグループごとに異なるケースがある
+- Event Studyの場合, $i \in g$ に対する処置タイミング $e_{g(i)}$ に対して
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \sum_{t \ne -1} \tau_{k} D_{e_{g(i)} + k} + \epsilon_{it}
+$$
+
+
+## この論文の目的
+
+::: {layout-ncol="2"}
+
+![](static/img/sim1_3.svg)
+
+![](static/img/sim4_6.svg)
+
+:::
+
+- Staggered DIDデザインにおいてバイアスが起きる状況をシミュレーションする
+- @sun2021 や @callaway2021a がUnbiasedに推定できることを確認
+- 既存の研究の推定値がどの程度信頼できるかを検証する
+
+## なぜバイアスが生じるのか?: @goodman-bacon2021
+
+::: {.callout-tip}
+
+## Goodman-Baconの分解定理
+
+$$
+y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
+$$
+
+のDID推定量 $\hat{\tau}$ は, あらゆる2×2のDID推定値の加重和になる.
+
+:::
+
+
+:::: {.columns}
+
+::: {.column width="40%"}
+
+![](static/img/goodman-bacon_fig1.svg)
+
+:::
+
+::: {.column width="60%"}
+
+- $\hat{\tau}_{it}$ は, 4通りの2×2のDID推定値の加重和になる (次ページ)
+- Forbidden comparison を含む推定値
+- Forbidden comparison を除けばよいのでは?
+    - @sun2021
+
+:::
+
+::::
+
+---
+
+![](static/img/goodman-bacon_fig2.svg){fig-align="center"}
+
+## なぜバイアスが生じるのか?: Jakiela's Diagnosis [-@jakiela2021]
+
+$$
+Y_{it} = \alpha_i + \lambda_t + \tau D_{it} + \epsilon_{it}
+$$
+
+Frisch–Waugh–Lovell Theoremにより,
+
+$$
+\hat{\tau} = \sum_{it} \frac{\tilde{D}_{it}}{\sum_{it} \tilde{D}_{it}^2} Y_{it}
+$$
+
+where
+
+$$
+\tilde{D}_{it} = D_{it} - \bar{D}_t - \bar{D}_i + \bar{D}_{all}
+$$
+
+---
+
+![](static/img/jakiela_decomp.svg){fig-align="center"}
+
+---
+
+$$
+\tilde{D}_{it} = D_{it} - \bar{D}_t - \bar{D}_i + \bar{D}_{all}
+$$
+
+- $\bar{D}_{t}$ が大きいほどウェイトが小さい
+  - Treatmentされたサンプルが多い時間ほどウェイトが小さい
+- $\bar{D}_{i}$ が大きいほどウェイトが小さい
+  - 早くTreatmentされたサンプルほどウェイトが小さい
+  - Treatment後の観測期間が長いほどウェイトが小さい
+- Treatmentされていても ($D_{it} = 1$), $\tilde{D}_{it} < 0$ の場合がある
+  - DIDデザイン: $\tau = \left(\mathbb{E}[Y_{11}] - \mathbb{E}[Y_{10}]\right) - \left(\mathbb{E}[Y_{01}] - \mathbb{E}[Y_{00}]\right)$
+  - 解釈できるか？ DIDデザインからの乖離
+
+
+## Replication 課題
+
+::: {.callout-note}
+
+Compustat Dataを手に入れるのは煩雑なので, シミュレーションの数値例はWorking Paper版[-@baker2021] を用いる
+
+:::
+
+
+1. 通常のTwo-way Fixed Effect がBiasを生じる場合と生じない場合を確認
+    - Figure 1 & 2 の再現
+1. Event StudyのプロットがBiasを含むことを確認
+    - Figure 5 の再現
+1. @sun2021 や @callaway2021a が不偏推定性を確認
+    - Figure 6 & 7 の再現
+
+### 発展課題
+
+1. @jakiela2021 のFigure 2のプロットをシミュレーションデータを用いて再現
+
+
+## References {visibility="uncounted"}
+
+::: {#refs}
+:::
