@@ -1,0 +1,93 @@
+---
+title: "StataとRの比較"
+author: Kazuharu Yanagimoto
+date: today
+execute:
+    echo: false
+    warning: false
+    message: false
+fig-cap-location: top
+---
+
+
+```{r}
+library(here)
+library(tidyverse)
+library(fixest)
+library(progress)
+library(tictoc)
+set.seed(1234)
+```
+
+```{r}
+n_obs <- 1000
+T <- 36 # 1980~2015
+num_sim <- 10
+INF <- 10^5
+
+tic()
+for (i in 1:num_sim) {
+
+    df_ind <- tibble(
+      id = 1:n_obs,
+      alpha = rnorm(n_obs, 0, 0.5),
+      group12 = c(rep(1, n_obs %/% 2),
+                  rep(2, n_obs - (n_obs %/% 2))),
+      group3456 = c(rep(1, n_obs %/% 3),
+                    rep(2, n_obs %/% 3),
+                    rep(3, n_obs - (n_obs %/% 3) * 2)),
+      tr_time12 = recode(group12, `1` = 1998, `2` = INF),
+      tr_time3456 = recode(group3456, `1` = 1989, `2` = 1998, `3` = 2007),
+      tau1 = rnorm(n_obs, 2, 0.2),
+      delta2 = rnorm(n_obs, 0.3, 0.2),
+      tau3 = rnorm(n_obs, 2, 0.2),
+      delta4 = recode(group3456, `1` = 5, `2` = 3, `3` = 1) + rnorm(n_obs, 0, 0.2),
+      delta5 = rnorm(n_obs, 0.3, 0.2),
+      delta6 = recode(group3456, `1` = 0.5, `2` = 0.3, `3` = 0.1) + rnorm(n_obs, 0, 0.2),
+      )
+    
+    data <- df_ind |>
+      slice(rep(1:n(), each = T)) |>
+      mutate(t = rep(1980:2015, time = n_obs),
+             lambda = rep(rnorm(T, 0, 0.5), time = n_obs),
+             is_treated12 = t >= tr_time12,
+             is_treated3456 = t >= tr_time3456,
+             y_common = alpha + lambda + rnorm(n_obs * T, 0, 0.5),
+             y1 = y_common + tau1 * is_treated12,
+             y2 = y_common + delta2 * (t - tr_time12) * is_treated12,
+             y3 = y_common + tau3 * is_treated3456,
+             y4 = y_common + delta4 * is_treated3456,
+             y5 = y_common + delta5 * (t - tr_time3456) * is_treated3456,
+             y6 = y_common + delta6 * (t - tr_time3456) * is_treated3456,
+             rel_time3456 = t - tr_time3456)
+    
+    sum12 <- feols(c(y1, y2) ~ is_treated12 | id + t,
+                       data = data, cluster = "id")
+    
+    sum3456 <- feols(c(y3, y4, y5, y6) ~ is_treated3456 | id + t,
+                       data = data, cluster = "id")    
+
+}
+toc()
+```
+
+```{r}
+data |>
+  summarize(y_mean = mean(y2), .by = c(t, group12)) |>
+    mutate(group12 = recode_factor(group12,
+                        `1` = "Treatment",
+                        `2` = "Control")) |>
+    ggplot(aes(x = t, y = y_mean, color = group12, fill = group12)) +
+    geom_line(linewidth = 1.5)
+```
+
+```{r}
+data |>
+  summarize(y_mean = mean(y6), .by = c(t, group3456)) |>
+    mutate(group3456 = recode_factor(group3456,
+                        `1` = "1989",
+                        `2` = "1998",
+                        `3` = "2007")) |>
+    ggplot(aes(x = t, y = y_mean, color = group3456, fill = group3456)) +
+    geom_line(linewidth = 1.5)
+```

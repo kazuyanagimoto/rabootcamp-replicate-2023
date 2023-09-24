@@ -5,13 +5,9 @@ services:
         environment:
             - TZ=Europe/Madrid
             - DISABLE_AUTH=true
-            - PYTHONUSERBASE=/home/rstudio/.pip
         volumes:
             - .:/home/rstudio/rabootcamp-replicate-2023
             - renv:/home/rstudio/.cache/R/renv
-            - pip:/home/rstudio/.pip
 volumes:
   renv:
-    external: true
-  pip:
     external: true
